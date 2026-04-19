@@ -1,3 +1,17 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
 
     - name: Login to DockerHub
       uses: docker/login-action@v2
@@ -11,13 +25,25 @@
     - name: Push image
       run: docker push ${{ secrets.DOCKER_USERNAME }}/node-app:latest
 
+    # ✅ Kubeconfig from secret (your approach)
     - name: Setup kubeconfig
       run: |
         mkdir -p $HOME/.kube
         echo "${{ secrets.KUBE_CONFIG }}" > $HOME/.kube/config
 
+    # ✅ Install kubectl (important)
+    - name: Install kubectl
+      run: |
+        curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        chmod +x kubectl
+        sudo mv kubectl /usr/local/bin/
+
+    # ✅ Verify connection
+    - name: Test cluster
+      run: kubectl get nodes
+
+    # 🚀 Deploy
     - name: Deploy to Kubernetes
       run: |
         kubectl apply -f deployment.yaml
         kubectl apply -f service.yaml
-
